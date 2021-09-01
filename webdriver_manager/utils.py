@@ -4,7 +4,7 @@ import platform
 import re
 import sys
 import subprocess
-
+from typing import List
 import requests
 
 from webdriver_manager.archive import Archive
@@ -116,11 +116,11 @@ def get_filename_from_response(response, name):
     return filename
 
 
-def linux_browser_apps_to_cmd(*apps: str) -> list[str]:
+def linux_browser_apps_to_cmd(*apps: str) -> List[str]:
     """Create chrome version command from browser app names.
 
     Result command example:
-        chromium --version || chromium-browser --version
+        ["chromium --version", "chromium-browser --version"]
     """
     ignore_errors_cmd_part = ' 2>/dev/null' if os.getenv('WDM_LOG_LEVEL') == '0' else ''
     return list(map(lambda i: f'{i} --version{ignore_errors_cmd_part}', apps))
