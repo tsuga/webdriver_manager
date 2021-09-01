@@ -153,15 +153,20 @@ def chrome_version(browser_type=ChromeType.GOOGLE):
     version = None
     popen_args = dict(stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, shell=True)
     for cmd in cmds:
+        log(f"cmd: {cmd}")
         with subprocess.Popen(cmd, **popen_args) as stream1:
             stdout = stream1.communicate()[0].decode()
+            log(f"stdout: {stdout}")
             version = re.search(pattern, stdout)
             if version:
                 break
             else:
                 if "Running as root without --no-sandbox is not supported." in stdout:
-                    with subprocess.Popen(cmd + " --no-sandbox", *popen_args) as stream2:
+                    cmd = cmd + " --no-sandbox"
+                    log(f"Re-running cmd with --no-sandbox: {cmd}")
+                    with subprocess.Popen(cmd, *popen_args) as stream2:
                         stdout = stream2.communicate()[0].decode()
+                        log(f"new stdout: {stdout}")
                         version = re.search(pattern, stdout)
                         if version:
                             break
