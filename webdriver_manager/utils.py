@@ -116,14 +116,14 @@ def get_filename_from_response(response, name):
     return filename
 
 
-def linux_browser_apps_to_cmd(*apps: str) -> str:
+def linux_browser_apps_to_cmd(*apps: str) -> list[str]:
     """Create chrome version command from browser app names.
 
     Result command example:
         chromium --version || chromium-browser --version
     """
     ignore_errors_cmd_part = ' 2>/dev/null' if os.getenv('WDM_LOG_LEVEL') == '0' else ''
-    return ' || '.join(list(map(lambda i: f'{i} --version{ignore_errors_cmd_part}', apps)))
+    return list(map(lambda i: f'{i} --version{ignore_errors_cmd_part}', apps))
 
 
 def chrome_version(browser_type=ChromeType.GOOGLE):
@@ -146,12 +146,25 @@ def chrome_version(browser_type=ChromeType.GOOGLE):
         }
     }
 
-    cmd = cmd_mapping[browser_type][os_name()]
+    cmds = cmd_mapping[browser_type][os_name()]
+    if isinstance(cmds, str):
+        cmds = [cmds, ]
+    
     version = None
-    with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
-                          shell=True) as stream:
-        stdout = stream.communicate()[0].decode()
-        version = re.search(pattern, stdout)
+    popen_args = dict(stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, shell=True)
+    for cmd in cmds:
+        with subprocess.Popen(cmd, **popen_args) as stream:
+            stdout = stream.communicate()[0].decode()
+            version = re.search(pattern, stdout)
+            if version:
+                break
+            else:
+                if "Running as root without --no-sandbox is not supported." in stdout:
+                    with subprocess.Popen(cmd + " --no-sandbox", *popen_args) as stream:
+                        stdout = stream.communicate()[0].decode()
+                        version = re.search(pattern, stdout)
+                        if version:
+                            break
 
     if not version:
         raise ValueError(f'Could not get version for Chrome with this command: {cmd}')
